@@ -1,0 +1,29 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "lucineer-vector",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "account_id": "049ff5e84ecf636b53b162cbb580aae6",
+
+  "ai": {
+    "binding": "AI",
+    "remote": true
+  },
+
+  "vectorize": [
+    {
+      "binding": "SKILLS_INDEX",
+      "index_name": "lucineer-skills"
+    }
+  ],
+
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
+
+  "vars": {
+    "EMBEDDING_MODEL": "@cf/baai/bge-small-en-v1.5"
+  }
+}
