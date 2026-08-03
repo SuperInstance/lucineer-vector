@@ -4,6 +4,9 @@
  * Provides embedding generation, skill upsert, and semantic query
  * for Lucineer's Roblox build patterns.
  *
+ * Phase 1 Day 1: Uniform shared-secret auth. Every endpoint except
+ * /api/health requires X-Lucineer-Key matching LUCINEER_SHARED_SECRET.
+ *
  * Bindings:
  *   AI           — Workers AI (bge-small-en-v1.5, 384-dim)
  *   SKILLS_INDEX — Vectorize index "lucineer-skills"
@@ -13,7 +16,8 @@ export interface Env {
   AI: Ai;
   SKILLS_INDEX: VectorizeIndex;
   EMBEDDING_MODEL: string;
-  LUCINEER_KEY: string;
+  /** Shared secret — must match X-Lucineer-Key header on all non-health routes. */
+  LUCINEER_SHARED_SECRET: string;
 }
 
 // ─── Types ─────────────────────────────────────────────
@@ -39,9 +43,7 @@ interface QueryRequest {
 
 async function embed(env: Env, text: string): Promise<number[]> {
   const res = await env.AI.run(env.EMBEDDING_MODEL as AiModel, { text });
-  // Workers AI returns { shape: [1, dims], data: number[][] }
   if (res.data && Array.isArray(res.data)) {
-    // bge models return number[][] — flatten first row
     if (Array.isArray(res.data[0])) {
       return res.data[0] as unknown as number[];
     }
@@ -55,6 +57,25 @@ function buildEmbeddingText(skill: SkillInput): string {
   return `${skill.name}\n${skill.description}\n${skill.luau_source}`;
 }
 
+// ─── Auth Middleware ─────────────────────────────────────
+
+/**
+ * Uniform auth check: every non-health endpoint must pass through this.
+ * Reads X-Lucineer-Key header and compares to LUCINEER_SHARED_SECRET.
+ * Returns null if authorized, or a 401/500 Response if not.
+ */
+function requireAuth(request: Request, env: Env): Response | null {
+  const key = request.headers.get("X-Lucineer-Key");
+  const expected = env.LUCINEER_SHARED_SECRET;
+  if (!expected) {
+    return json({ error: "Server misconfigured: LUCINEER_SHARED_SECRET not set" }, 500);
+  }
+  if (!key || key !== expected) {
+    return json({ error: "Unauthorized" }, 401);
+  }
+  return null; // authorized
+}
+
 // ─── Router ────────────────────────────────────────────
 
 export default {
@@ -63,29 +84,26 @@ export default {
     const path = url.pathname;
     const method = req.method;
 
-    // CORS
+    // CORS preflight
     if (method === "OPTIONS") {
-      return new Response(null, {
-        headers: cors(),
+      return new Response(null, { headers: cors() });
+    }
+
+    // ─── Health check — the ONLY endpoint that skips auth ───
+    if (path === "/api/health" && method === "GET") {
+      return json({
+        status: "ok",
+        service: "lucineer-vector",
+        index: "lucineer-skills",
+        model: env.EMBEDDING_MODEL,
       });
     }
 
-    // Auth gate — health check is open, everything else requires X-Lucineer-Key
-    const isHealthCheck = (path === "/api/health" || path === "/" || path === "/health") && method === "GET";
-    if (!isHealthCheck) {
-      const key = req.headers.get("X-Lucineer-Key");
-      const expected = env.LUCINEER_KEY;
-      if (!expected || key !== expected) {
-        return json({ error: "Unauthorized" }, 401);
-      }
-    }
+    // ─── Auth gate — every endpoint below requires the shared secret ───
+    const authFailure = requireAuth(req, env);
+    if (authFailure) return authFailure;
 
     try {
-      // GET /api/health
-      if (path === "/api/health" && method === "GET") {
-        return json({ status: "ok", service: "lucineer-vector", index: "lucineer-skills", model: env.EMBEDDING_MODEL });
-      }
-
       // POST /api/embed
       if (path === "/api/embed" && method === "POST") {
         const body = await req.json<EmbedRequest>();
