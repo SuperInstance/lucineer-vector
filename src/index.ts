@@ -13,6 +13,7 @@ export interface Env {
   AI: Ai;
   SKILLS_INDEX: VectorizeIndex;
   EMBEDDING_MODEL: string;
+  LUCINEER_KEY: string;
 }
 
 // ─── Types ─────────────────────────────────────────────
@@ -67,6 +68,16 @@ export default {
       return new Response(null, {
         headers: cors(),
       });
+    }
+
+    // Auth gate — health check is open, everything else requires X-Lucineer-Key
+    const isHealthCheck = (path === "/api/health" || path === "/" || path === "/health") && method === "GET";
+    if (!isHealthCheck) {
+      const key = req.headers.get("X-Lucineer-Key");
+      const expected = env.LUCINEER_KEY;
+      if (!expected || key !== expected) {
+        return json({ error: "Unauthorized" }, 401);
+      }
     }
 
     try {
@@ -191,9 +202,9 @@ function err(message: string, status: number): Response {
 
 function cors(): HeadersInit {
   return {
-    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Origin": "https://lucineer-relay.casey-digennaro.workers.dev",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Headers": "Content-Type, X-Lucineer-Key",
   };
 }
 
