@@ -122,7 +122,8 @@ export default {
         const embeddingText = buildEmbeddingText(skill);
         const vector = await embed(env, embeddingText);
 
-        const vectorId = `skill-${slug(skill.name)}-${Date.now()}`;
+        // Use stable ID (same as batch seed) to prevent duplicate vectors on re-upsert
+        const vectorId = `skill-${slug(skill.name)}`;
         const metadata: VectorizeVectorMetadata = {
           name: skill.name,
           description: skill.description,

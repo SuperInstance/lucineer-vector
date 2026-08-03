@@ -24,6 +24,7 @@
   },
 
   "vars": {
-    "EMBEDDING_MODEL": "@cf/baai/bge-small-en-v1.5"
+    "EMBEDDING_MODEL": "@cf/baai/bge-small-en-v1.5",
+    "LUCINEER_SHARED_SECRET": "AUTH_KEY_PLACEHOLDER"
   }
 }
