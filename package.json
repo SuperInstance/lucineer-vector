@@ -8,7 +8,8 @@
     "seed": "node scripts/seed.js"
   },
   "devDependencies": {
-    "wrangler": "^4.118.0",
-    "@cloudflare/workers-types": "^5.20260730.1"
+    "@cloudflare/workers-types": "^5.20260730.1",
+    "vitest": "^4.1.10",
+    "wrangler": "^4.118.0"
   }
 }
