@@ -273,7 +273,7 @@ npx wrangler secret put LUCINEER_SHARED_SECRET
 |-----------|------|
 | [lucineer-worker](../lucineer-worker) | Job relay, calls this service for skill lookup |
 | [lucineer-memory](../lucineer-memory) | D1 player profiles and build history |
-| [lucineer-brain](../lucineer-brain) | Multi-model pipeline consuming skill context |
+| [lucineer-system](../lucineer-system) | Multi-model pipeline consuming skill context |
 | [lucineer-system](../lucineer-system) | Design docs and architecture specs |
 
 ---
